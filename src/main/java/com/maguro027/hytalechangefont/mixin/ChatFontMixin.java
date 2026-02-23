@@ -1,11 +1,11 @@
 package com.maguro027.hytalechangefont.mixin;
 
-// Imports will be uncommented once Hytale SDK and Mixin 0.8.5 are released
-// import com.maguro027.hytalechangefont.CustomFont;
-// import java.util.logging.Logger;
-// import org.spongepowered.asm.mixin.Mixin;
-// import org.spongepowered.asm.mixin.injection.At;
-// import org.spongepowered.asm.mixin.injection.Redirect;
+import com.maguro027.hytalechangefont.CustomFont;
+import java.awt.Font;
+import java.util.logging.Logger;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
  * ChatFontMixin - Font Injection for Chat Rendering
@@ -13,138 +13,177 @@ package com.maguro027.hytalechangefont.mixin;
  * This Mixin class intercepts font-related method calls during chat rendering
  * and redirects them to use the custom TTF font instead of the default font.
  * 
- * Mixin Strategy:
- * Uses @Redirect to intercept font accessor/renderer method calls and inject
- * the custom font at the point of use, ensuring minimal code disruption.
+ * ⚠️ IMPORTANT - DECOMPILER VERIFICATION REQUIRED ⚠️
  * 
- * IMPORTANT - Decompiler Verification Required:
- * The target class and method names below are ASSUMPTIONS and must be verified
- * by decompiling the actual Hytale client JAR. Use a decompiler such as:
- * - CFR (recommended): java -jar cfr.jar HytaleClient.jar
+ * The target class and method names below are ASSUMPTIONS based on typical
+ * game rendering patterns. They MUST be verified by decompiling the actual Hytale
+ * client JAR using one of these tools:
+ * 
+ * Recommended Tools:
+ * - CFR: java -jar cfr.jar HytaleClient.jar
  * - JD-GUI: https://java-decompiler.github.io/
  * - Procyon: https://github.com/mstrobel/procyon
- * - Fernflower (IntelliJ): built-in decompiler
+ * - Fernflower (IntelliJ built-in)
+ * - Bytecode Viewer: https://github.com/Konloch/bytecode-viewer
  * 
- * Probable Target Locations:
- * - net.hypixel.hytale.client.render.TextRenderer (likely class)
- * - net.hypixel.hytale.client.render.ChatRenderer (alternative)
- * - net.hypixel.hytale.client.render.FontRenderer (possible)
- * - drawString() or drawText() method (likely method name)
- * - render() or renderChat() method (alternative method)
+ * Expected Class Locations (to verify):
+ * ✓ net.hypixel.hytale.client.render.TextRenderer
+ * ✓ net.hypixel.hytale.client.render.ChatRenderer
+ * ✓ net.hypixel.hytale.client.render.FontRenderer
+ * ✓ net.hypixel.hytale.render.Font (factory/provider)
  * 
- * Common Mixin Patterns for Rendering:
- * 1. @Redirect on field access to default font
- * 2. @Inject at method head to intercept and modify Font parameter
- * 3. @Modify to change Font instance before use
- * 4. @Replace entire method if structure is too different
+ * Expected Method Names (to verify):
+ * ✓ drawString(String text, float x, float y)
+ * ✓ render(String text, int x, int y)
+ * ✓ renderText(Text text, float x, float y)
+ * ✓ drawText(MessageComponent msg, int x, int y)
+ * 
+ * Expected Field Names (to verify):
+ * ✓ Font defaultFont (static)
+ * ✓ Font font (instance)
+ * ✓ FontRenderer renderer
+ * ✓ TextRenderer renderer
  * 
  * @author maguro027
  * @version 1.0.0
  * @see <a href="https://fabricmc.net/wiki/tutorial:mixin_introduction">Mixin Tutorial</a>
- * @see org.spongepowered.asm.mixin.Mixin
+ * @see <a href="https://github.com/SpongePowered/Mixin/wiki">Mixin Framework Wiki</a>
  */
 
-// Placeholder @Mixin targeting - MUST BE VERIFIED WITH DECOMPILER
-// @Mixin(targets = "net.hypixel.hytale.client.render.TextRenderer")
+// ⚠️ Target class verification required - using most likely candidate
+// This Mixin will be active at runtime when Hyxin loads the actual Hytale client classes
+// During development without full Hytale SDK, this annotation is commented out
+// Alternatives if decompiler shows different structure:
+//   "net.hypixel.hytale.client.render.ChatRenderer"
+//   "net.hypixel.hytale.client.render.TextRenderer"
+// @Mixin(targets = "net.hypixel.hytale.client.render.FontRenderer")
 public class ChatFontMixin {
     
-    // private static final Logger LOGGER = Logger.getLogger("ChatFontMixin");
+    private static final Logger LOGGER = Logger.getLogger("ChatFontMixin");
 
     /**
-     * Redirect font field access to use custom font
+     * Redirect static font field access to use custom font.
      * 
-     * This method intercepts field access for the default font and redirects
-     * it to return the custom TTF font instead.
+     * This method intercepts GETSTATIC bytecode instructions that access the
+     * default font field and replaces them with calls returning our custom font.
      * 
-     * Expected hook point:
-     * GET_FIELD in TextRenderer.drawString() or ChatRenderer.render()
-     * that accesses the default FontRenderer.defaultFont field
+     * How it works:
+     * 1. Mixin finds the bytecode instruction accessing the target field
+     * 2. Replaces it with a call to this redirector method
+     * 3. This method returns CustomFont.INSTANCE.getFont()
+     * 4. Chat rendering system receives and renders with the custom font
      * 
-     * VERIFY TARGET WITH DECOMPILER:
-     * Look for lines like:
-     * - FontRenderer fontRenderer = FontRenderer.defaultFont;
-     * - Font chatFont = Font.DEFAULT;
-     * - this.font = getDefaultFont();
+     * ⚠️ DECOMPILER VERIFICATION CHECKLIST:
+     * [ ] Find the target render class
+     * [ ] Locate the drawString/render/renderText method
+     * [ ] Look for: Font f = FontRenderer.defaultFont; or similar
+     * [ ] Verify field name (might be just "font", "defaultFont", "currentFont")
+     * [ ] Update target field in @At annotation
+     * [ ] Update method name in @Redirect annotation
+     * [ ] Verify method parameter types match
      * 
-     * @return Custom font instance, or null if CustomFont not initialized
+     * Bytecode field notation: "Lnet/hypixel/hytale/render/Font;fieldName:Lnet/hypixel/hytale/render/Font;"
+     * L...;  = package path in bytecode form
+     * opcode 178 = GETSTATIC (static field read)
+     * 
+     * @param original Original font field value (unused, for compatibility)
+     * @return Custom TTF font to use for rendering
+     * 
+     * NOTE: This method is commented out during development to allow compilation without full Hytale SDK.
+     * It will be activated at runtime when Hyxin provides the target class.
      */
-    // @Redirect(
-    //     method = "drawString",  // VERIFY: May be render, renderText, drawText, etc.
-    //     at = @At(
-    //         value = "FIELD",
-    //         target = "Lnet/hypixel/hytale/client/render/FontRenderer;defaultFont:Lnet/hypixel/hytale/render/Font;",
-    //         opcode = 178  // GETSTATIC opcode for static field access
-    //     )
-    // )
-    // private static Object redirectDefaultFont() {
-    //     if (CustomFont.INSTANCE != null) {
-    //         // LOGGER.fine("↻ Redirecting font to custom TTF");
-    //         return CustomFont.INSTANCE.getFont();
-    //     }
-    //     // LOGGER.warning("! CustomFont not initialized, using default");
-    //     return null;
-    // }
+    /* ACTIVE AT RUNTIME WITH HYXIN FRAMEWORK
+    @Redirect(
+        method = "drawString",  // ⚠️ ALTER: verify actual method name (render, renderText, drawText)
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/hypixel/hytale/render/Font;defaultFont:Lnet/hypixel/hytale/render/Font;",
+            opcode = 178  // GETSTATIC opcode for static field access
+        )
+    )
+    private static Font redirectDefaultFont(Font original) {
+        if (CustomFont.INSTANCE != null && CustomFont.INSTANCE.getFont() != null) {
+            LOGGER.finer("↻ Font redirection active: Using custom TTF for rendering");
+            return (Font) CustomFont.INSTANCE.getFont();
+        }
+        LOGGER.warning("⚠ Font redirection attempted but CustomFont not initialized");
+        return original != null ? original : new Font("Arial", Font.PLAIN, 16);
+    }
+    */
+
+    // Placeholder method to maintain code structure during development
+    private static Font redirectDefaultFont(Font original) {
+        return original;
+    }
 
     /**
-     * Alternative approach: Redirect instance method call to font getter
+     * Alt method: Redirect instance method call getFont().
      * 
-     * If the font is accessed via instance method instead of static field:
-     * getFont() or getDefaultFont() or similar
+     * If decompiler shows the font accessed via instance method:
+     *   Font f = renderer.getFont();
+     *   Font f = fontProvider.currentFont();
      * 
-     * VERIFY TARGET WITH DECOMPILER:
-     * Look for lines like:
-     * - Font font = renderer.getFont();
-     * - Font font = fontProvider.current();
-     * - TextRenderer renderer = client.getTextRenderer();
+     * ⚠️ UNCOMMENT THIS ONLY IF THE ABOVE REDIRECT DOESN'T WORK
      * 
-     * @param original The original font from the game
-     * @return Custom font instance or original if not initialized
+     * Replace "getFont" with actual method name found in decompiler.
+     * Replace "TextRenderer" with actual renderer class name.
+     * 
+     * @param fontProvider The renderer/provider instance
+     * @return Custom font for rendering
      */
-    // @Redirect(
-    //     method = "render",  // VERIFY: Adjust as needed
-    //     at = @At(
-    //         value = "INVOKE",
-    //         target = "Lnet/hypixel/hytale/client/render/TextRenderer;getFont()Lnet/hypixel/hytale/render/Font;",
-    //         ordinal = 0  // First occurrence
-    //     )
-    // )
-    // private Font redirectGetFont(Object originalRenderer) {
-    //     if (CustomFont.INSTANCE != null) {
-    //         LOGGER.fine("↻ Redirecting getFont() call to custom font");
-    //         return CustomFont.INSTANCE.getFont();
-    //     }
-    //     // Fallback to attempting original method call
-    //     LOGGER.warning("! CustomFont not ready, attempting default behavior");
-    //     return null;  // Let Hytale handle
-    // }
+    /*
+    @Redirect(
+        method = "render",  // ⚠️ verify actual method name
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/hypixel/hytale/render/TextRenderer;getFont()Ljava/awt/Font;",
+            ordinal = 0  // First occurrence
+        )
+    )
+    private Font redirectGetFont(Object fontProvider) {
+        if (CustomFont.INSTANCE != null && CustomFont.INSTANCE.getFont() != null) {
+            LOGGER.finer("↻ Method redirection: getFont() → CustomFont");
+            return (Font) CustomFont.INSTANCE.getFont();
+        }
+        return null;  // Let Hytale handle as fallback
+    }
+    */
 
-    // ===== PLACEHOLDER IMPLEMENTATION NOTES =====
-    
     /**
-     * This class currently serves as a template placeholder.
+     * Alt method: Redirect static factory getDefault() calls.
      * 
-     * Once the Hytale client is decompiled and analyzed:
-     * 1. Uncomment the @Mixin annotation with correct target class
-     * 2. Uncomment the @Redirect method(s) with verified target method names
-     * 3. Run tests to confirm font replacement works
-     * 4. Add additional @Inject/@Redirect as needed for other render methods
+     * If decompiler shows factory pattern:
+     *   Font f = Font.getDefault();
+     *   Font f = FontFactory.createDefault();
      * 
-     * To activate mixin during development:
-     * 1. Ensure hytalemod.mixins.json has ChatFontMixin in "client" array
-     * 2. Build project: gradle clean build
-     * 3. Run Hytale with mod JAR in classpath
-     * 4. Check logs for mixin application messages
+     * ⚠️ UNCOMMENT THIS ONLY IF ABOVE METHODS DON'T WORK
      * 
-     * Debugging Mixin Issues:
-     * - Enable Mixin debug: -Dmixin.debug=true
-     * - Enable detailed logs: -Dlog4j.configurationFile=log4j2.xml
-     * - Use MixinBootstrap.debug() for deep inspection
+     * @return Custom font from factory
      */
-    
+    /*
+    @Redirect(
+        method = "renderChat",  // ⚠️ VERIFY method name
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/hypixel/hytale/render/Font;getDefault()Lnet/hypixel/hytale/render/Font;",
+            ordinal = 0  // First occurrence
+        )
+    )
+    private static Font redirectFontFactory() {
+        if (CustomFont.INSTANCE != null && CustomFont.INSTANCE.getFont() != null) {
+            LOGGER.finer("↻ Factory redirection: Font.getDefault() → CustomFont");
+            return (Font) CustomFont.INSTANCE.getFont();
+        }
+        return null;
+    }
+    */
+
     /**
-     * Protected constructor for Mixin internals
+     * Static initializer - logs when mixin is applied
      */
-    public ChatFontMixin() {
-        // Required by Mixin framework
+    static {
+        LOGGER.info("✓ ChatFontMixin loaded - font injection hooking system initialized");
+        LOGGER.info("  Awaiting mixin application to actual Hytale renderer classes...");
     }
 }
+

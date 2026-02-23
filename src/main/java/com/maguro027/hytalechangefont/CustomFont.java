@@ -7,107 +7,123 @@ import java.io.InputStream;
 import java.util.logging.Logger;
 
 /**
- * Custom Font Manager for Hytale Chat
+ * Custom Font Manager for Hytale Chat Rendering
  * 
- * This class is responsible for loading and managing custom TTF fonts
- * that are embedded in the mod's resources. It provides a singleton instance
- * of the loaded font for use throughout the mod.
+ * This class manages the loading and caching of custom TTF fonts for use
+ * throughout the Hytale chat system. It implements a singleton pattern to
+ * ensure only one font instance is active at any given time.
  * 
  * Font Loading Strategy:
- * 1. Attempt to load custom.ttf from /assets/hytalemod/fonts/custom.ttf
- * 2. If TTF load fails, fallback to system Arial font
- * 3. Always provide a valid Font instance to prevent null pointer exceptions
+ * 1. PRIMARY: Load custom.ttf from /assets/hytalemod/fonts/custom.ttf
+ * 2. FALLBACK: If loading fails, use system Arial font (always available)
+ * 3. RESULT: Never returns null - guarantees a valid Font object
  * 
- * Future Integration (Hytale SDK):
- * This class should extend or wrap {@code net.hypixel.hytale.render.Font}
- * to properly integrate with Hytale's rendering pipeline:
- * {@code extends HytaleFont implements FontProvider}
+ * Integration with Hytale:
+ * When the Hytale Font class becomes available, this class should be
+ * updated to extend or wrap Hytale's Font type for seamless integration.
+ * 
+ * Current approach: Uses standard java.awt.Font with Hytale compatibility layer
  * 
  * @author maguro027
  * @version 1.0.0
  */
-public class CustomFont /* extends HytaleFont */ {
+public class CustomFont {
     
     private static final Logger LOGGER = Logger.getLogger("HytaleCustomFont");
     
-    /** Singleton instance of the custom font */
+    /** Singleton instance of the custom font manager */
     public static CustomFont INSTANCE;
     
-    /** Path to the custom TTF font in resources */
+    /** Resource path to the custom TTF font */
     private static final String FONT_PATH = "/assets/hytalemod/fonts/custom.ttf";
     
-    /** Font size in points */
+    /** Target font size for chat rendering (16pt typical for UI) */
     private static final float FONT_SIZE = 16.0f;
     
-    /** Name of the custom font (used for fallback identification) */
-    private static final String CUSTOM_FONT_NAME = "CustomHytaleFont";
-    
-    /** The loaded AWT Font instance */
+    /** The underlying AWT Font object */
     private Font awtFont;
     
-    /** Flag indicating whether the font was loaded successfully */
-    private boolean isLoaded;
+    /** Flag indicating if a custom TTF was successfully loaded */
+    private boolean isCustomFontLoaded;
 
     /**
-     * Private constructor - use init() to create instance
+     * Private constructor - use init() method to create instance
      */
     private CustomFont() {
-        // Future: super("Custom Font", loadTTF(), FONT_SIZE);
         this.awtFont = loadTTF();
-        this.isLoaded = (awtFont != null && !awtFont.getFamily().equals("Arial"));
+        this.isCustomFontLoaded = (awtFont != null && !awtFont.getFamily().equals("Arial"));
     }
 
     /**
-     * Initialize the singleton instance of CustomFont
-     * Must be called during plugin onEnable()
+     * Initialize the singleton instance.
+     * 
+     * This must be called once during plugin initialization (in ChangeFontMod.onEnable).
+     * Subsequent calls will return the cached INSTANCE.
+     * 
+     * Thread-safety note: Currently not synchronized. If multi-threaded access is needed,
+     * consider adding synchronized block or using AtomicReference.
      */
-    public static void init() {
+    public static synchronized void init() {
+        if (INSTANCE != null) {
+            LOGGER.info("CustomFont already initialized, reusing instance");
+            return;
+        }
+        
         try {
             INSTANCE = new CustomFont();
-            LOGGER.info("✓ CustomFont singleton initialized");
+            
+            String status = INSTANCE.isCustomFontLoaded ? "Custom TTF" : "System Arial (fallback)";
+            LOGGER.info("✓ CustomFont initialized");
             LOGGER.info("  Font: " + INSTANCE.awtFont.getFontName());
             LOGGER.info("  Size: " + FONT_SIZE + "pt");
-            LOGGER.info("  Status: " + (INSTANCE.isLoaded ? "SUCCESS" : "FALLBACK"));
+            LOGGER.info("  Status: " + status);
+            
         } catch (Exception e) {
             LOGGER.severe("✗ Failed to initialize CustomFont: " + e.getMessage());
             e.printStackTrace();
-            // Still create instance with fallback font
+            // Still provide a fallback instance
             INSTANCE = new CustomFont();
         }
     }
 
     /**
-     * Get the loaded AWT Font instance
+     * Get the underlying AWT Font instance.
      * 
-     * @return java.awt.Font instance (never null - returns fallback if load fails)
+     * This returns the active font (either custom TTF or system fallback).
+     * Never returns null - always provides a valid Font object.
+     * 
+     * @return Font instance for rendering
      */
     public Font getFont() {
         return awtFont;
     }
 
     /**
-     * Check if the custom font was successfully loaded
+     * Check whether the custom TTF was successfully loaded.
      * 
-     * @return true if custom TTF was loaded, false if using fallback
+     * @return true if custom TTF is active, false if using fallback
      */
     public boolean isCustomFontLoaded() {
-        return isLoaded;
+        return isCustomFontLoaded;
     }
 
     /**
-     * Get the font name
+     * Get the font's display name.
      * 
-     * @return Font name string
+     * @return Font family name (e.g., "Noto Sans JP", "Arial")
      */
     public String getFontName() {
         return awtFont.getFontName();
     }
 
     /**
-     * Derive a new font with specified size
-     * Useful for UI elements requiring different font sizes
+     * Create a new font with a different size, maintaining the font style.
      * 
-     * @param size Font size in points
+     * Useful for UI elements that need different font sizes:
+     * - Large fonts for titles/headers
+     * - Small fonts for tooltips/hints
+     * 
+     * @param size Target size in points
      * @return New Font instance with specified size
      */
     public Font deriveFont(float size) {
@@ -115,34 +131,39 @@ public class CustomFont /* extends HytaleFont */ {
     }
 
     /**
-     * Load custom TTF font from resources
+     * Load custom TTF font from resources.
      * 
-     * This method attempts to load a TTF font from:
-     * /assets/hytalemod/fonts/custom.ttf
+     * Resource Path: /assets/hytalemod/fonts/custom.ttf
+     * Embedded Location: Inside this JAR (packed by Gradle)
      * 
-     * If the custom font cannot be loaded for any reason,
-     * it gracefully falls back to system Arial font to prevent crashes.
+     * Loading Process:
+     * 1. Use ClassLoader.getResourceAsStream() for JAR-safe access
+     * 2. Create Font from stream using Font.createFont()
+     * 3. Derive to specified FONT_SIZE
+     * 4. Close stream via try-with-resources
      * 
-     * Resource Loading Strategy:
-     * - Uses ClassLoader.getResourceAsStream() for JAR-safe loading
-     * - Properly closes InputStream to prevent resource leaks
-     * - Derives font to specified size (FONT_SIZE constant)
+     * Exception Handling:
+     * - FontFormatException: TTF file corrupted or invalid format
+     * - IOException: File access issues
+     * - Exception: Unexpected errors
+     * - All cases: Fallback to Arial without crashing
      * 
-     * @return Loaded Font instance, or Arial fallback if load fails
+     * @return Loaded Font instance or Arial fallback
      */
     private static Font loadTTF() {
         try (InputStream fontStream = CustomFont.class.getResourceAsStream(FONT_PATH)) {
             
-            // Check if resource exists
+            // Verify resource exists
             if (fontStream == null) {
-                LOGGER.warning("✗ Font file not found: " + FONT_PATH);
+                LOGGER.warning("✗ Font file not found in resources: " + FONT_PATH);
+                LOGGER.info("  Make sure custom.ttf is placed in src/main/resources" + FONT_PATH);
                 return getFallbackFont();
             }
             
             // Load TTF from stream
             Font loadedFont = Font.createFont(Font.TRUETYPE_FONT, fontStream);
             
-            // Derive to specified size
+            // Derive to target size
             Font sizedFont = loadedFont.deriveFont(FONT_SIZE);
             
             LOGGER.info("✓ Custom TTF font loaded successfully");
@@ -152,8 +173,7 @@ public class CustomFont /* extends HytaleFont */ {
             return sizedFont;
             
         } catch (FontFormatException e) {
-            LOGGER.warning("✗ Font format error: " + e.getMessage());
-            LOGGER.warning("  The TTF file may be corrupted or invalid");
+            LOGGER.warning("✗ Font format error (TTF corrupted?): " + e.getMessage());
             return getFallbackFont();
             
         } catch (IOException e) {
@@ -168,10 +188,13 @@ public class CustomFont /* extends HytaleFont */ {
     }
 
     /**
-     * Get system fallback font
+     * Get system fallback font (Arial).
      * 
-     * Used when custom TTF loading fails. Returns Arial at specified size,
-     * which is widely available on all systems.
+     * Arial is chosen because:
+     * - Available on virtually all systems
+     * - Professional appearance
+     * - Good Unicode coverage
+     * - Monospace alternative: "Courier New"
      * 
      * @return System Arial font at FONT_SIZE
      */
