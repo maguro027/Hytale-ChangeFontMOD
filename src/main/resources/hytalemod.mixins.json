@@ -1,0 +1,10 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "com.maguro027.hytalechangefont.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "client": [
+        "ChatFontMixin"
+    ],
+    "refmap": "hytalemod.refmap.json"
+}
