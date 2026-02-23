@@ -1,4 +1,8 @@
 Manifest-Version: 1.0
 Implementation-Title: hytale-changefont-mod
 Implementation-Version: 1.0.0
+Implementation-Vendor: maguro027
+Specification-Title: Hytale Change Font MOD
+Specification-Version: 1.0.0
+Specification-Vendor: maguro027
 

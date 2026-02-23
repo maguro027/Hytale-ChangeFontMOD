@@ -3,8 +3,10 @@
     "minVersion": "0.8",
     "package": "com.maguro027.hytalechangefont.mixin",
     "compatibilityLevel": "JAVA_25",
+    "mixins": [],
     "client": [
         "ChatFontMixin"
     ],
+    "server": [],
     "refmap": "hytalemod.refmap.json"
 }

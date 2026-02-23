@@ -1,8 +1,16 @@
+/**
+ * Hytale Change Font MOD - Build Configuration
+ * 
+ * Language: Java 25
+ * Build Tool: Gradle with Kotlin DSL
+ * Target: Hytale client-side mod with Hyxin (Mixin loader)
+ */
+
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
+
 plugins {
     java
     kotlin("jvm") version "2.1.0"
-    // Shadow plugin - Hytaleリリース後に必要に応じて有効化
-    // id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "com.maguro027"
@@ -16,46 +24,62 @@ java {
 
 repositories {
     mavenCentral()
-    // Hyxin依存（CurseMavenで）: https://cursemaven.com/
+    // CurseMaven for Hyxin and other Hytale dependencies
     maven { url = uri("https://cursemaven.com") }
 }
 
 dependencies {
-    // Hytale Server API (公式Mavenから) - リリース後に有効化
-    // compileOnly("com.hypixel.hytale:Server:1.0.+")
-    // Mixin (Hyxin経由) - リリース後に有効化
+    // ===== HYTALE API (Uncomment once SDK is released) =====
+    // Hytale Server API - provides Plugin class and core APIs
+    // compileOnly("com.hypixel.hytale:server:1.0.0")
+    
+    // ===== MIXIN FRAMEWORK (Uncomment once SDK is released) =====
+    // org.spongepowered:mixin - provides @Mixin, @Inject, @Redirect annotations
     // compileOnly("org.spongepowered:mixin:0.8.5")
+    
+    // Mixin annotation processor for refmap generation
     // annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
+    
+    // Runtime inclusion of Mixin for agent-based injection
     // implementation("org.spongepowered:mixin:0.8.5")
+    
+    // ===== LOGGING =====
+    // Standard Java logging (included in JDK)
+    
+    // ===== TESTING (Optional) =====
+    // testImplementation("junit:junit:4.13.2")
 }
 
 tasks {
+    compileJava {
+        options.encoding = "UTF-8"
+        options.release.set(25)
+    }
+    
     jar {
-        // リソースを含める
         from(sourceSets.main.get().output)
         
-        // マニフェスト設定
         manifest {
             attributes(
                 "Implementation-Title" to project.name,
-                "Implementation-Version" to project.version
+                "Implementation-Version" to project.version,
+                "Implementation-Vendor" to "maguro027",
+                "Specification-Title" to "Hytale Change Font MOD",
+                "Specification-Version" to project.version,
+                "Specification-Vendor" to "maguro027"
             )
         }
     }
     
-    // shadowJar - Hytaleリリース後に有効化
-    // shadowJar {
-    //     archiveClassifier.set("")
-    //     destinationDirectory.set(file("build/libs"))
-    // }
-    // build {
-    //     dependsOn(shadowJar)
-    // }
+    clean {
+        delete(layout.buildDirectory)
+    }
     
-    // runタスク (テストサーバー) - Hytaleリリース後に有効化
-    // named<JavaExec>("run") {
-    //     classpath = sourceSets.main.get().runtimeClasspath
-    //     jvmArgs = listOf("-Xmx4G")
-    //     // HytaleServer JARパスを環境変数で指定
-    // }
+    javadoc {
+        options.encoding = "UTF-8"
+        (options as StandardJavadocDocletOptions).apply {
+            addBooleanOption("html5", true)
+            addStringOption("Xdoclint", "-html")
+        }
+    }
 }
