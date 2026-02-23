@@ -1,0 +1,5 @@
+.gradle/nb-cache/
+build/
+.gradle/
+*.class
+*.jar
