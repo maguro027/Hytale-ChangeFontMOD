@@ -75,6 +75,7 @@ dependencies {
     compileOnly("org.spongepowered:mixin:0.8.5")
     
     // Mixin annotation processor - generates refmap.json for method mapping
+    // Must be on annotationProcessor configuration for Gradle to use it during compile
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
     
     // Runtime Mixin library - included in fat JAR for agent-based injection
@@ -93,6 +94,14 @@ tasks {
     compileJava {
         options.encoding = "UTF-8"
         options.release.set(25)
+        
+        // ===== MIXIN ANNOTATION PROCESSING =====
+        // The annotationProcessor configuration will automatically inject the Mixin processor
+        // We just need to pass the refmap arguments
+        options.compilerArgs.addAll(listOf(
+            "-Amixin.refmap=hytalemod.refmap.json",
+            "-Amixin.default.obf=srg"
+        ))
     }
     
     jar {

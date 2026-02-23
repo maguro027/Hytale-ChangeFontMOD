@@ -73,10 +73,15 @@ public class CustomFont {
             INSTANCE = new CustomFont();
             
             String status = INSTANCE.isCustomFontLoaded ? "Custom TTF" : "System Arial (fallback)";
+            LOGGER.info("╔════════════════════════════════════════════════════════════╗");
+            LOGGER.info("║         CustomFont Singleton Initialization Success        ║");
+            LOGGER.info("╚════════════════════════════════════════════════════════════╝");
             LOGGER.info("✓ CustomFont initialized");
-            LOGGER.info("  Font: " + INSTANCE.awtFont.getFontName());
-            LOGGER.info("  Size: " + FONT_SIZE + "pt");
-            LOGGER.info("  Status: " + status);
+            LOGGER.info("  Font loaded: " + INSTANCE.awtFont.getFontName());
+            LOGGER.info("  Font size: " + FONT_SIZE + "pt");
+            LOGGER.info("  Font status: " + status);
+            LOGGER.info("  Is custom: " + INSTANCE.isCustomFontLoaded);
+            LOGGER.info("✓ Ready for Mixin injection into chat renderer");
             
         } catch (Exception e) {
             LOGGER.severe("✗ Failed to initialize CustomFont: " + e.getMessage());

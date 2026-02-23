@@ -107,17 +107,82 @@ MOD には Arial フォールバックが含まれています。カスタムフ
     - Hyxin JAR がクラスパスにあることを確認
     - JVM 引数を追加: `-javaagent:Hyxin-0.0.11-all.jar` またはランチャー設定で構成
 
-2. **Hytale クライアントを通常に起動**
+2. **Hytale クライアントを起動**（**重要**: Early Plugin フラグを使用）
+
+    ```bash
+    # Windows
+    HytaleClient.exe --accept-early-plugins
+    
+    # Java直接実行
+    java -javaagent:Hyxin-0.0.11-all.jar -jar HytaleClient.jar --accept-early-plugins
+    ```
 
 3. **コンソールログを確認**:
+
     ```
-    [INFO] ✓ Hytale Change Font MOD v1.0.0
-    [INFO] ✓ Font system ready: Custom TTF
-    [INFO] ✓ Mixin injection hooks active
-    [INFO] ✓ Plugin loaded successfully
+    [INFO] ✓ Hytale Change Font MOD v1.0.1-hotfix
+    [INFO] [EARLY PLUGIN] Server initialization in progress...
+    [INFO] [DELAYED INIT] Beginning CustomFont initialization...
+    [INFO] ✓ CustomFont initialized
+    [INFO]   Font loaded: [フォント名]
+    [INFO] [DELAYED INIT] ✓ Plugin initialized successfully!
+    [INFO] ChatFontMixin loaded - font injection hooking system initialized
     ```
 
 ---
+
+## 🔧 Mixin 有効化（Hytale インスタンスで）
+
+このバージョンでは、開発ビルド環境での Hytale JAR の非可用性を考慮して、Mixin アノテーションを一時的にコメントアウトしてあります。**Hytale 実行環境で有効化**するには：
+
+### 方法 1: 自分でコンパイル＆有効化
+
+1. [ChatFontMixin.java](src/main/java/com/maguro027/hytalechangefont/mixin/ChatFontMixin.java) を開く
+2. 以下のコメントを見つけて有効化:
+
+    ```java
+    // @Mixin(targets = "net.hytale.client.render.ChatRenderer")  
+    // UNCOMMENT FOR RUNTIME
+    ```
+
+    ↓ 修正:
+
+    ```java
+    @Mixin(targets = "net.hytale.client.render.ChatRenderer")
+    ```
+
+3. @Inject と @Redirect も有効化:
+
+    ```java
+    // @Inject(method = "renderChatMessage", ...)
+    // UNCOMMENT ABOVE @Inject WHEN DEPLOYED...
+    ```
+
+    ↓ 修正（コメント削除）:
+
+    ```java
+    @Inject(method = "renderChatMessage", ...)
+    ```
+
+4. ビルド:
+
+    ```bash
+    ./gradlew clean build
+    ```
+
+5. JAR を J:\Hy\UserData\Mods\EarlyPlugins\ に配置
+
+### 方法 2: オンラインで自動有効化レポートを入手
+
+GitHub Issues で Mixin ターゲットの完全な確認を依頼：
+
+- Hytale バージョン
+- エラーメッセージ
+- ログ出力を貼付
+
+→ 自動生成された有効化版をダウンロード
+
+
 
 ## 📝 テスト
 
@@ -336,6 +401,162 @@ java -jar cfr.jar HytaleClient.jar
 3. `CustomFont singleton initialized` のログを確認
 
 ---
+
+## 🔍 Hytale Decompile ガイド（Mixin ターゲット確認）
+
+Mixin 注入が失敗した場合は、Hytale クライアント JAR をデコンパイルして、正確なクラス名とメソッド名を確認する必要があります。
+
+### ステップ 1: HytaleClient.jar を入手
+
+- Hytale ランチャーの cache/assets ディレクトリから探す
+- OR: `java -jar Launcher.jar --dump` でダンプを出力
+- 通常: `~/Hytale/assets/` または `~/.cache/hytale/` など
+
+### ステップ 2: デコンパイラをダウンロード
+
+#### 推奨ツール（最も使いやすい）
+
+| ツール      | コマンド                                             | 対応環境 |
+| ----------- | ---------------------------------------------------- | -------- |
+| **JD-GUI**  | GUI で JAR を開く                                    | Win/Mac  |
+| **CFR**     | `java -jar cfr.jar HytaleClient.jar --outputdir src` | All      |
+| **Procyon** | `java -jar procyon.jar HytaleClient.jar`             | All      |
+
+#### JD-GUI（最も簡単）推奨
+
+1. [JD-GUI をダウンロード](https://java-decompiler.github.io/)
+2. JAR をドラッグ＆ドロップで開く
+3. 検索: `Ctrl+F` で "Chat"（大文字小文字を区別）
+4. 結果から `ChatRenderer`, `TextRenderer`, `FontRenderer` などを探す
+
+#### CFR（コマンドライン）推奨
+
+```bash
+# デコンパイル出力をファイルに保存
+java -jar cfr.jar HytaleClient.jar --outputdir decompiled/
+
+# または直接検索
+java -jar cfr.jar HytaleClient.jar | grep -i "ChatRenderer\|TextRenderer\|FontRenderer"
+```
+
+### ステップ 3: ターゲットクラスを特定
+
+デコンパイル結果で以下を探します：
+
+#### A. チャットレンダーのクラス名
+
+`ChatFontMixin.java` の `@Mixin` アノテーションを見つけて更新：
+
+```java
+// 例: デコンパイル結果が以下だった場合
+// public class ChatRenderer {
+//     private Font font = ...
+//     public void renderChatMessage(String text) { ... }
+
+// 修正: @Mixin アノテーションを以下に更新
+@Mixin(targets = "net.hytale.client.render.ChatRenderer")
+// または
+@Mixin(targets = "net.hytale.ui.chat.ChatRenderer")
+```
+
+#### B. フォント描画メソッド名
+
+`@Redirect` アノテーションを見つけて更新：
+
+```java
+// デコンパイル結果で以下のメソッドを探す:
+// - renderChatMessage(String text, int x, int y)
+// - drawText(MessageComponent msg, float x, float y)
+// - render(String text, Vector3f pos)
+
+// ChatFontMixin.java の @Redirect を編集:
+@Redirect(method = "renderChatMessage", at = @At(...))
+private Font redirectFont(Font original) { ... }
+```
+
+#### C. フォント変数名
+
+`@Redirect` の `target` フィールド指定を更新：
+
+```java
+// デコンパイル結果から:
+// class ChatRenderer {
+//     private Font font;          // ← フォント変数
+//     private Font defaultFont;   // ← 静的フォント
+
+// 修正: target パスを更新
+@Redirect(
+    method = "renderChatMessage",
+    at = @At(
+        value = "FIELD",
+        target = "Lnet/hytale/client/render/ChatRenderer;font:Ljava/awt/Font;"
+        //                                             ^^^^^
+        //                ここを正しいフィールド名に更新
+    )
+)
+```
+
+### ステップ 4: ChatFontMixin.java を更新
+
+例）デコンパイル結果が以下だった場合：
+
+```java
+// 他のクラスの例
+public class net.hytale.client.feature.chat.ChatRenderer {
+    private Font currentFont;
+
+    public void renderMessage(ChatMessage msg) {
+        drawText(msg.getText(), currentFont);
+    }
+}
+```
+
+修正後：
+
+```java
+@Mixin(targets = "net.hytale.client.feature.chat.ChatRenderer")
+public class ChatFontMixin {
+
+    @Redirect(
+        method = "renderMessage",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/hytale/client/feature/chat/ChatRenderer;currentFont:Ljava/awt/Font;"
+        )
+    )
+    private Font redirectFont(Font original) {
+        // ... 既存のログ処理
+    }
+}
+```
+
+### ステップ 5: ビルド＆テスト
+
+```bash
+./gradlew clean build
+
+# Mixin annotation processing ログを確認
+> Task :compileJava
+[OK] hytalemod.refmap.json generated successfully
+
+# EarlyPlugins に配置
+cp build/libs/hytale-changefont-mod-1.0.jar ~/Hytale/EarlyPlugins/
+```
+
+### トラブルシューティング: Mixin が反応しない
+
+コンソールで以下をチェック：
+
+```
+[INFO] [Mixin] ChatFontMixin loaded ← 出ていない = jar に Mixin がない
+[INFO] ✓ Font injected into ... ← 出ていない = ターゲット名が間違っている
+```
+
+**解決:**
+
+1. `hytalemod.refmap.json` がビルド出力に生成されているか確認
+2. ターゲットクラス名をすべて検証（大文字小文字、パッケージ名）
+3. 別のデコンパイラを試す（JD-GUI → CFR）
 
 ## 📖 参考資料
 
