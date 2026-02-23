@@ -6,13 +6,14 @@
 
 これは **Hyxin Early Plugin** で、**Mixin 0.8.5** のバイトコード操作を使用して Hytale のチャット描画をインターセプトし、デフォルトフォントをカスタム TTF フォントに置き換えています。
 
-| コンポーネント | バージョン |
-| ----------- | --------- |
-| Java | 25 LTS |
-| ビルドツール | Gradle with Kotlin DSL |
-| プラグインローダー | Hyxin 0.0.11+ |
-| Mixin フレームワーク | 0.8.5 |
-| アーキテクチャ | クライアント側 MOD |
+| コンポーネント       | バージョン                |
+| -------------------- | ------------------------- |
+| Java                 | 25 LTS                    |
+| ビルドツール         | Gradle with Kotlin DSL    |
+| プラグインローダー   | Hyxin 0.0.11+             |
+| Mixin フレームワーク | 0.8.5                     |
+| MOD バージョン       | **1.0.1-hotfix** 安全化版 |
+| アーキテクチャ       | クライアント側 MOD        |
 
 ---
 
@@ -231,6 +232,67 @@ java -jar cfr.jar HytaleClient.jar
 ---
 
 ## 🐛 トラブルシューティング
+
+### Early Plugin エラー: "Cannot invoke \"String.hashCode()\" because \"this.group\" is null"
+
+**症状**: MOD が読み込まれ、サーバー起動時に NullPointerException が発生してゲームがクラッシュ
+
+**原因**:
+
+- `onEnable()` がサーバー初期化中（初期化完了前）に呼び出されている
+- グローバルゲーム状態がまだ初期化されていない
+- Hyxin Early Plugin の読み込みタイミングの問題
+
+**解決方法**:
+
+1. **JVM フラグを確認**
+
+    ```
+    --accept-early-plugins
+    ```
+
+    このフラグを Hytale 起動時に追加してください
+
+2. **EarlyPlugins ディレクトリの配置順を確認**
+
+    複数の MOD がある場合は、このプラグインを **最初の位置** に配置してください：
+
+    ```
+    Hytale/EarlyPlugins/
+    ├── 00-hytale-changefont-mod-1.0.jar    ← 最初に読み込まれる
+    ├── 01-other-mod.jar
+    ├── 02-another-mod.jar
+    └── ...
+    ```
+
+    ファイル名の先頭に数字を付けるでアルファベット順で読み込み順序を制御できます。
+
+3. **遅延初期化が有効か確認**
+
+    v1.0.1-hotfix 以降は、`onEnable()` が遅延初期化を使用しています：
+
+    ```java
+    Thread.sleep(1500);  // サーバー初期化完了を待つ
+    ```
+
+    コンソールで以下が表示されることを確認:
+
+    ```
+    [EARLY PLUGIN] Server initialization in progress...
+    [DELAYED INIT] Beginning CustomFont initialization...
+    [DELAYED INIT] ✓ Plugin initialized successfully!
+    ```
+
+4. **他の MOD との競合をチェック**
+
+    複数の Early Plugin が同時に画面初期化を試みている可能性があります：
+    - ログで `FAILED TO START SERVER` の直前に何が読み込まれたか確認
+    - 疑わしい MOD を無効化してテスト
+
+5. **Hyxin バージョンを確認**
+    ```
+    Hyxin-0.0.11-all.jar or higher required
+    ```
 
 ### 問題: JAR が読み込まれない
 

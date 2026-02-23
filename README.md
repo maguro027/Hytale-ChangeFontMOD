@@ -6,13 +6,14 @@
 
 This is a **Hyxin Early Plugin** that uses **Mixin 0.8.5** bytecode manipulation to intercept Hytale's chat rendering and replace the default font with a custom TTF font file.
 
-| Component       | Version                |
-| --------------- | ---------------------- |
-| Java            | 25 LTS                 |
-| Build Tool      | Gradle with Kotlin DSL |
-| Plugin Loader   | Hyxin 0.0.11+          |
-| Mixin Framework | 0.8.5                  |
-| Architecture    | Client-side mod        |
+| Component       | Version                   |
+| --------------- | ------------------------- |
+| Java            | 25 LTS                    |
+| Build Tool      | Gradle with Kotlin DSL    |
+| Plugin Loader   | Hyxin 0.0.11+             |
+| Mixin Framework | 0.8.5                     |
+| MOD Version     | **1.0.1-hotfix** (Safety) |
+| Architecture    | Client-side mod           |
 
 ---
 
@@ -231,6 +232,62 @@ See comments in ChatFontMixin.java for detailed instructions.
 ---
 
 ## 🐛 Troubleshooting
+
+### Critical: Early Plugin Error: "Cannot invoke \"String.hashCode()\" because \"this.group\" is null"
+
+**Symptom**: MOD loads, then game crashes during server startup with NullPointerException
+
+**Root Cause**:
+- `onEnable()` is called DURING server initialization, NOT after completion
+- Global game state is still uninitialized at plugin load time
+- Hyxin Early Plugin loading timing race condition
+
+**Solution**:
+
+1. **Verify JVM Flag**
+   ```
+   --accept-early-plugins
+   ```
+   Add this flag when launching Hytale client
+
+2. **Check EarlyPlugins Directory Load Order**
+   
+   If you have multiple Early Plugins, place this one **FIRST**:
+   ```
+   Hytale/EarlyPlugins/
+   ├── 00-hytale-changefont-mod-1.0.jar    ← Loads first
+   ├── 01-other-mod.jar
+   ├── 02-another-mod.jar
+   └── ...
+   ```
+   
+   Use numeric prefixes to control load order alphabetically.
+
+3. **Verify Delayed Initialization is Active**
+   
+   v1.0.1-hotfix and later use delayed init with 1.5 second wait:
+   ```java
+   Thread.sleep(1500);  // Wait for server to fully initialize
+   ```
+   
+   Check console for these messages:
+   ```
+   [EARLY PLUGIN] Server initialization in progress...
+   [DELAYED INIT] Beginning CustomFont initialization...
+   [DELAYED INIT] ✓ Plugin initialized successfully!
+   ```
+
+4. **Check for MOD Conflicts**
+   
+   Multiple Early Plugins trying to initialize screen at same time:
+   - Review logs for what loaded before "FAILED TO START SERVER"
+   - Disable suspicious plugins one by one
+   - Test with this MOD only
+
+5. **Verify Hyxin Version**
+   ```
+   Hyxin-0.0.11-all.jar (or higher) required
+   ```
 
 ### Issue: JAR doesn't load
 

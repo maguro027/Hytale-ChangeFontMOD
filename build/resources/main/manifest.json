@@ -2,10 +2,12 @@
     "Name": "Hytale Change Font MOD",
     "Main": "com.maguro027.hytalechangefont.ChangeFontMod",
     "Version": "1.0.0",
-    "Description": "Replaces chat font with custom TTF from /assets/hytalemod/fonts/custom.ttf",
+    "Description": "Replace chat font with custom TTF via Mixin injection. Supports Noto Sans JP and any TTF format.",
     "Author": "maguro027",
+    "AuthorURL": "https://github.com/maguro027",
     "License": "MIT",
     "Repository": "https://github.com/maguro027/Hytale-ChangeFontMOD",
+    "IssueTracker": "https://github.com/maguro027/Hytale-ChangeFontMOD/issues",
     "Hyxin": {
         "Configs": [
             "hytalemod.mixins.json"

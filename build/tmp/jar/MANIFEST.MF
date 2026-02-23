@@ -5,4 +5,6 @@ Implementation-Vendor: maguro027
 Specification-Title: Hytale Change Font MOD
 Specification-Version: 1.0.0
 Specification-Vendor: maguro027
+Multi-Release: true
+Created-By: Gradle 9.3.1
 

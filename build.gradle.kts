@@ -52,13 +52,25 @@ repositories {
 }
 
 dependencies {
+    // ===== HYXIN EARLY PLUGIN FRAMEWORK =====
+    // Hyxin is NOT a compile-time dependency - it's provided at runtime by the loader
+    // The Plugin base class and APIs are available ONLY during execution
+    // DO NOT add Hyxin as a dependency here - it causes version conflicts
+    
     // ===== HYTALE SERVER API =====
     // Provides Plugin base class and core game interfaces
-    // NOTE: The Server API is bundled with Hyxin loader at runtime
-    // For development, it's available in the official Hytale SDK from Hypixel
+    // Server API is bundled with Hyxin loader at runtime
+    // NOT available in public repositories - disabled for development builds
+    // Uncomment only if you have special access to Hypixel's SDK
     // compileOnly("com.hypixel.hytale:Server:1.0.+")
     
     // ===== MIXIN FRAMEWORK 0.8.5 =====
+    // CRITICAL FOR EARLY PLUGIN SAFETY:
+    // - compileOnly: Used only during compilation to resolve @Mixin annotations
+    //   This prevents accidental inclusion of Mixin that might conflict with Hyxin's version
+    // - annotationProcessor: Generates refmap.json for method mapping (local use only)
+    // - implementation: Bundled in JAR as fallback (required for injection at runtime)
+    
     // Annotation-based bytecode manipulation for method/field hooking
     compileOnly("org.spongepowered:mixin:0.8.5")
     
@@ -66,9 +78,12 @@ dependencies {
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
     
     // Runtime Mixin library - included in fat JAR for agent-based injection
+    // This is the ACTUAL runtime dependency that will be bundled
     implementation("org.spongepowered:mixin:0.8.5")
     
-    // ===== LOGGING (built-in with Java) =====
+    // ===== LOGGING =====
+    // Java's built-in java.util.logging or SLF4J
+    // No external logging dependencies needed for this simple plugin
     
     // ===== TESTING =====
     testImplementation("junit:junit:4.13.2")
